@@ -101,6 +101,15 @@ $creditScoreValues = array(
 	'Fair' => 'Fair (580 - 650)',
 	'Poor' => 'Poor (Below 580)'
 );
+/** 
+ * Array for serializing response roof shade
+ */
+$roofShadeValues = array(
+	'Full' => 'Full Sun',
+	'Partial' => 'Partial Sun',
+	'Shade' => 'A Lot of Shade',
+	'Uncertain' => 'Uncertain'
+);
 
 /*
 * Array of possible values and respective fields for req body, update according to client's requirements
@@ -156,6 +165,13 @@ if (array_key_exists('credit_score', $parsedFields)) {
 	$score = $parsedFields['credit_score'];
 	$score_exists = array_key_exists($score, $creditScoreValues);
 	$parsedFields['credit_score'] = $score_exists ? $creditScoreValues[$score] : 'No Score';
+}
+
+# Serialize roof shade for GHL
+if (array_key_exists('shading', $parsedFields)) {
+	$shade = $parsedFields['shading'];
+	$shade_exists = array_key_exists($shade, $roofShadeValues);
+	$parsedFields['shading'] = $shade_exists ? $roofShadeValues[$shade] : 'Uncertain';
 }
 
 # verifying email
