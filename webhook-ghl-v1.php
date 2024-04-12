@@ -245,7 +245,7 @@ if ($campaign == 'NoShow') {
 					"will_cut_trees": "' . $willingRemoveTree . '",
 			    }
 			}';
-		$contactDetail = exec_curl($ENDPOINT, 'POST', $fields, $headers);
+		$contactDetail = exec_curl($ENDPOINT, 'POST', $headers, $fields);
 
 		$webhookLogEntry = null;
 
@@ -291,7 +291,7 @@ if ($campaign == 'NoShow') {
 					"will_cut_trees": "' . $willingRemoveTree . '",
 			    }
 			}';
-		$contactDetail = exec_curl($endpoint, 'PUT', $fields, $headers);
+		$contactDetail = exec_curl($endpoint, 'PUT', $headers, $fields);
 
 		$webhookLogEntry = null;
 
@@ -323,7 +323,6 @@ if ($campaign == 'NoShow') {
 	 * creating contact *
 	 ********************/
 	// VICIdial custom fields
-	$headers  = array('Authorization: Bearer ' . $API_KEY, 'Content-Type: application/json');
 	$fields   = '{
 			"email": "' . $email . '",
 			"phone": "+1' . $phone . '",
@@ -347,7 +346,7 @@ if ($campaign == 'NoShow') {
 		      "vicidial_list_name": "' . $listName . '"
 		    }
 		}';
-	$contactDetail = exec_curl($ENDPOINT, 'POST', $fields, $headers);
+	$contactDetail = exec_curl($ENDPOINT, 'POST', $headers, $fields);
 	$webhookLogEntry = null;
 
 	if ($ENABLE_DEBUG) {
