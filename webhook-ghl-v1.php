@@ -187,7 +187,7 @@ $tag = '';
 
 if ($parsedFields['dispo'] == 'APPTBK') {
 	$disposition = 'Appointment Booked';
-	$tag = ['cc appt'];
+	$tag = 'cc appt';
 }
 
 # Unpacking, edit required values, remove unrequired
