@@ -174,6 +174,36 @@ if (array_key_exists('shading', $parsedFields)) {
 	$parsedFields['shading'] = $shade_exists ? $roofShadeValues[$shade] : 'Uncertain';
 }
 
+# Serialize average electric bill for GHL
+if (array_key_exists('avg_electric_bill', $parsedFields)) {
+	$bill = preg_replace('/[^0-9]/', '', $parsedFields['avg_electric_bill']);
+	$bill = (int)$bill;
+
+	switch (true) {
+		case ($bill <= 100):
+			$parsedFields['avg_electric_bill'] = '$0 - $100';
+			break;
+		case ($bill <= 150):
+			$parsedFields['avg_electric_bill'] = '$101 - $150';
+			break;
+		case ($bill <= 200):
+			$parsedFields['avg_electric_bill'] = '$151 - $200';
+			break;
+		case ($bill <= 300):
+			$parsedFields['avg_electric_bill'] = '$201 - $300';
+			break;
+		case ($bill <= 400):
+			$parsedFields['avg_electric_bill'] = '$301 - $400';
+			break;
+		case ($bill <= 500):
+			$parsedFields['avg_electric_bill'] = '$401 - $500';
+			break;
+		case ($bill > 500):
+			$parsedFields['avg_electric_bill'] = '$500+';
+			break;
+	}
+}
+
 # verifying email
 if ((empty($email)) || (strpos($email, '@') === false)) {
 	$email = "dummy" . "@dummymail.com";
