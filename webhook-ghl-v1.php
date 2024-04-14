@@ -271,7 +271,7 @@ if ($campaign == 'NoShow') {
 				"customField": {
 					"credit_score": "' . $creditScore . '",
 					"roof_shade": "' . $shading . '",
-					"avg_electric_bill": "' . $avgElectricBill . '",
+					"what_is_your_average_monthly_electric_bill": "' . $avgElectricBill . '",
 					"will_cut_trees": "' . $willingRemoveTree . '",
 			    }
 			}';
@@ -317,7 +317,7 @@ if ($campaign == 'NoShow') {
 				"customField": {
 					"credit_score": "' . $creditScore . '",
 					"roof_shade": "' . $shading . '",
-					"avg_electric_bill": "' . $avgElectricBill . '",
+					"what_is_your_average_monthly_electric_bill": "' . $avgElectricBill . '",
 					"will_cut_trees": "' . $willingRemoveTree . '",
 			    }
 			}';
@@ -369,7 +369,7 @@ if ($campaign == 'NoShow') {
 			"customField": {
 				"credit_score": "' . $creditScore . '",
 				"roof_shade": "' . $shading . '",
-				"avg_electric_bill": "' . $avgElectricBill . '",
+				"what_is_your_average_monthly_electric_bill": "' . $avgElectricBill . '",
 				"will_cut_trees": "' . $willingRemoveTree . '",
 		      "vicidial_lead_id": "' . $leadId . '",
 		      "vicidial_list_id": "' . $listId . '",
