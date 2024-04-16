@@ -408,7 +408,7 @@ if ($campaign == 'NoShow') {
  ****************/
 // VICIdial notes to the contact record
 $endpoint = 'https://rest.gohighlevel.com/v1/contacts/' . $contactId  . '/notes/';
-$fields   = '{"body": "Disposition: ' . $disposition . ' \\n Agent: ' . $agent . ' \\n Call Notes: ' . str_replace("\n", "\\n", $call_notes) . ' \\n Recording URL: ' . $recording_url . '"}';
+$fields   = '{"body": "Disposition: ' . $disposition . ' \\n Agent: ' . $agent . ' \\n Call Notes: ' . str_replace("\n", "\\n", $callNotes) . ' \\n Recording URL: ' . $recordingUrl . '"}';
 
 $notesResponse = exec_curl($endpoint, 'POST', $headers, $fields);
 
