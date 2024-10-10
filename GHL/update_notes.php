@@ -1,8 +1,6 @@
 <?php
 ini_set('display_errors', 1);
 
-$DOMAIN = 'REPLACE THIS STRING WITH THE CALL CENTER DOMAIN ex. callcenterdomain.ccdocs.com';
-$PASS = 'REPLACE WITH APIUSER PASSWORD';
 $url 		   = '';
 $lead_id	   = '';
 $str_notes 	   = '';
@@ -19,9 +17,11 @@ $log_file($text);
 $phone		 = $_REQUEST['phone'];
 $contact_id  = $_REQUEST['contact_id'];
 $location_id = $_REQUEST['location_id'];
+
 if (isset($_REQUEST['lead_id'])) {
 	$lead_id = $_REQUEST['lead_id'];
 }
+
 $phone = preg_replace('/[^\,0-9]/', '', $phone);
 
 $get_notes_response = get_notes($contact_id);
@@ -36,9 +36,9 @@ if (array_key_exists("notes", $get_notes_response)) {
 	}
 	$str_notes = urlencode($str_notes);
 	if ($lead_id == '') {
-		$url = $DOMAIN . '/vicidial/non_agent_api.php?source=GHL&user=APIUSER&pass=' . $PASS . '&function=update_lead&search_method=PHONE_NUMBER&records=5&phone_number=' . $phone . '&comments=' . $str_notes;
+		$url = DIALER_URL . '/vicidial/non_agent_api.php?source=GHL&user=' . VICIDIAL_USER . '&pass=' . VICIDIAL_PASS . '&function=update_lead&search_method=PHONE_NUMBER&records=5&phone_number=' . $phone . '&comments=' . $str_notes;
 	} else {
-		$url = $DOMAIN . '/vicidial/non_agent_api.php?source=GHL&user=APIUSER&pass=' . $PASS . '&function=update_lead&search_method=LEAD_ID&&lead_id=' . $lead_id . '&comments=' . $str_notes;
+		$url = DIALER_URL . '/vicidial/non_agent_api.php?source=GHL&user=' . VICIDIAL_USER . '&pass=' . VICIDIAL_PASS . '&function=update_lead&search_method=LEAD_ID&&lead_id=' . $lead_id . '&comments=' . $str_notes;
 	}
 
 	$add_notes_response = add_notes_vicidial($url);

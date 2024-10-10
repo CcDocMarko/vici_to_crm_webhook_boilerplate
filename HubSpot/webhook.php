@@ -192,7 +192,7 @@ $parsedFields['dispo'] = $leadDispositionValues[$parsedFields['dispo']];
 	'hs_id' => $huspotId
 ] = $parsedFields;
 
-$appt_notes = 'Disposition: ' . $disposition . ' Agent: ' . $agent . ' Call Notes: ' . $callNotes;
+$appt_notes = ' Agent: ' . $agent . ' Call Notes: ' . $callNotes;
 
 $jsonObject = json_encode([
 	"properties" => [
@@ -234,10 +234,25 @@ $headers  = array('Authorization: Bearer ' . API_KEY, 'Content-Type: application
 if ($disposition === $leadDispositionValues['APPTBK']) {
 
 	$endpoint = BASE_URL . "objects/contacts";
-	$contactDetail = exec_curl($endpoint, 'POST', $headers, $jsonObject);
+	$newContact = exec_curl($endpoint, 'POST', $headers, $jsonObject);
+
+	$vici_response = 'Unable to update CRM id in vicidial';
+
+	if ($newContact["id"]) {
+		$params = [
+			'custom_fields' => 'Y',
+			'hs_id' => $newContact["id"],
+			'lead_id' => $leadId,
+			'search_method' => 'LEAD_ID'
+		];
+
+		$vici_response = update_lead(http_build_query($params));
+	}
+
 
 	if (ENABLE_DEBUG) {
 		$dump = createlogger('response-dump.txt');
-		$dump(json_encode($contactDetail));
+		$dump(json_encode($newContact));
+		$dump($vici_response);
 	}
 }

@@ -49,6 +49,37 @@ function createLogger($file_name)
 }
 
 /**
+ * Executes a cURL request to the given URL.
+ *
+ * @param string $url URL to request
+ *
+ * @return string $response cURL response
+ */
+function exec_curl_VICI($url)
+{
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
+    ));
+
+    $response = curl_exec($curl);
+
+    curl_close($curl);
+    return $response;
+}
+
+
+/**
  * Assigns the array of parameter values to a new one and returns it.
  * Optionally logs to a file.
  *
@@ -119,4 +150,44 @@ function roundToNearestHalfHour($time)
     }
 
     return $dateTime->format('g:i A');
+}
+
+
+/**
+ * Make a call to VICIdial API
+ *
+ * @param string $call_function The function to call
+ * @param string $params        The parameters to pass to the function
+ *
+ * @return string The response from the API
+ */
+function vicidial_api($call_function = 'update_lead', $params = '')
+{
+    $url_build = DIALER_URL . '/vicidial/non_agent_api.php?' . 'source=VICIDIAL' . '&user=' . VICIDIAL_USER . '&pass=' . VICIDIAL_PASS . '&function=' . $call_function . '&' . $params;
+
+    return exec_curl_VICI($url_build);
+}
+
+/**
+ * Updates a lead in VICIdial
+ *
+ * @param string $params The parameters to pass to the update_lead function
+ *
+ * @return string The response from the API
+ */
+function update_lead($params = '')
+{
+    return vicidial_api('update_lead', $params);
+}
+
+/**
+ * Creates a new lead in VICIdial
+ *
+ * @param string $params The parameters to pass to the add_lead function
+ *
+ * @return string The response from the API
+ */
+function create_lead($params = '')
+{
+    return vicidial_api('add_lead', $params);
 }
