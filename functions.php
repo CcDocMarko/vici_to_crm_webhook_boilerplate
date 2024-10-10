@@ -17,10 +17,6 @@ function exec_curl($endpoint, $method, $headers, $fields = '')
     curl_setopt_array($curl, array(
         CURLOPT_URL => $endpoint,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_POSTFIELDS => $fields,
@@ -87,4 +83,40 @@ function processFields($result, $paramKeys)
         }
         exit();
     }
+}
+
+
+/**
+ * Rounds given time to the nearest half hour
+ *
+ * @param string $time Time in H:i format
+ * @return string Rounded time in H:i format
+ */
+function roundToNearestHalfHour($time)
+{
+    list($hours, $minutes) = explode(':', $time);
+    $hours = intval($hours);
+    $minutes = intval($minutes);
+
+    if ($minutes < 15) {
+        $minutes = 0;
+    } elseif ($minutes < 45) {
+        $minutes = 30;
+    } else {
+        $minutes = 0;
+        $hours++;
+    }
+
+    if ($hours >= 24) {
+        $hours = $hours % 24;
+    }
+
+    $roundedTime = sprintf('%02d:%02d', $hours, $minutes);
+    $dateTime = DateTime::createFromFormat('H:i', $roundedTime);
+
+    if (!$dateTime) {
+        return '';
+    }
+
+    return $dateTime->format('g:i A');
 }
