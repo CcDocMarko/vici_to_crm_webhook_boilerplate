@@ -109,7 +109,6 @@ function processFields($result, $paramKeys)
     } else {
         $text = "\nEmpty Request. No Parameters in the Request.";
         if (ENABLE_DEBUG && isset($logger)) {
-            // Log only if debug mode is enabled and logger object is created
             $logger($text);
         }
         exit();
@@ -190,4 +189,88 @@ function update_lead($params = '')
 function create_lead($params = '')
 {
     return vicidial_api('add_lead', $params);
+}
+
+
+/**
+ * Retrieves a recording URL from one of the VICIdial domains, given a recording path.
+ * 
+ * Tries each of the domains in VICIDIAL_DOMAINS and returns the first one that returns a 200 status code.
+ * 
+ * If no URLs are found after $maxAttempts, returns 'No recording URL'.
+ * 
+ * @param string $recordingPath The path to the recording
+ * @return string The URL of the recording or 'No recording URL'
+ */
+function get_recording_url($recordingPath)
+{
+    $recordingLogEntry = null;
+
+    if (ENABLE_DEBUG) {
+        $recordingLogEntry = createLogger('recording_urls_logs.txt');
+    }
+
+    $attempts = 0;
+    $maxAttempts = 5;
+
+    $hit_url = null;
+
+    while (!$hit_url) {
+        if ($attempts >= $maxAttempts) {
+            if (ENABLE_DEBUG) {
+                $recordingLogEntry("Exceeded maximum attempts ($maxAttempts) to retrieve the recording URL." . PHP_EOL);
+            }
+            break;
+        }
+
+        foreach (VICIDIAL_DOMAINS as $domain) {
+            $recordingURL = $domain . $recordingPath;
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $recordingURL);
+            curl_setopt($ch, CURLOPT_NOBODY, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+
+            curl_exec($ch);
+
+            $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            $statuses[$recordingURL] = $statusCode;
+
+            curl_close($ch);
+        }
+
+        $recordingLogEntry("Fetched responses" . json_encode($statuses) . PHP_EOL);
+
+        foreach ($statuses as $url => $status) {
+            if ($status === 200) {
+                $hit_url = $url;
+            }
+        }
+
+
+        if (!$hit_url) {
+            $attempts++;
+            if (ENABLE_DEBUG) {
+                $recordingLogEntry("Attempt $attempts: No recording URL found. Retrying after 60 seconds..." . PHP_EOL);
+            }
+            sleep(60);
+        }
+    }
+
+    if ($hit_url) {
+        if (ENABLE_DEBUG) {
+            $recordingLogEntry("Successfully retrieved the recording URL after $attempts attempts." . PHP_EOL);
+        }
+        return $hit_url;
+    } else {
+        if (ENABLE_DEBUG) {
+            $recordingLogEntry("Failed to retrieve the recording URL after $maxAttempts attempts." . PHP_EOL);
+        }
+        return 'No recording URL';
+    }
 }
