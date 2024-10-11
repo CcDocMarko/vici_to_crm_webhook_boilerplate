@@ -202,7 +202,7 @@ function create_lead($params = '')
  * @param string $recordingPath The path to the recording
  * @return string The URL of the recording or 'No recording URL'
  */
-function get_recording_url($recordingPath)
+function get_recording_url_domain($recordingPath)
 {
     $recordingLogEntry = null;
 
@@ -273,4 +273,38 @@ function get_recording_url($recordingPath)
         }
         return 'No recording URL';
     }
+}
+
+/**
+ * Fetches the latest recording URL for a given agent.
+ *
+ * @param string $agent The login name of the agent.
+ *
+ * @return array An associative array containing the recording_id and recording_url
+ *               of the latest recording for the given agent on the current day.
+ */
+function get_latest_recording_details($agent)
+{
+    $localTime = new DateTime();
+    $date_only = $localTime->format('Y-m-d');
+
+    $params = [
+        'source' => 'VICIDIAL',
+        'stage' => 'pipe',
+        'agent_user' => $agent,
+        'date' => $date_only
+    ];
+
+    $recordingLogEntry = null;
+    $encoded_params = http_build_query($params);
+
+    $response = vicidial_api('recording_lookup', $encoded_params);
+    $lines = explode("\n", trim($response));
+    $lastRecord = end($lines);
+    $record = explode('|', $lastRecord);
+    if (ENABLE_DEBUG) {
+        $recordingLogEntry = createLogger('recording_log.txt');
+        $recordingLogEntry('Last record: ' . $lastRecord . PHP_EOL);
+    }
+    return $record;
 }
