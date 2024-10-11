@@ -5,7 +5,7 @@ require_once 'functions.php';
 # fetch request
 $result = $_REQUEST;
 # Add this URL into campaign Dispo URL field
-# https://login.theccdocs.com/custom/webhook.php?first_name=--A--first_name--B--&last_name=--A--last_name--B--&email=--A--email--B--&phone=--A--phone_number--B--&address=--A--address1--B--&city=--A--city--B--&state=--A--state--B--&postal_code=--A--postal_code--B--&call_notes=--A--call_notes--B--&dispo=--A--dispo--B--&agent=--A--fullname--B--&recording_url=https%3A%2F%2Flogin.theccdocs.com%2FRECORDINGS%2FMP3%2F--A--recording_filename--B---all.mp3&list_id=--A--list_id--B--&lead_id=--A--lead_id--B--&list_name=--A--list_name--B--&campaign=--A--campaign--B--&shade=--A--shade--B--&roof_age=--A--roof_age--B--&willing_remove_tree=--A--willing_remove_tree--B--&home_owned=--A--home_owned--B--&electric_provider=--A--electric_provider--B--&appt_type=--A--appt_type--B--&appointment_date=--A--appointment_date--B--&appointment_time=--A--appointment_time--B--&utility_provider=--A--utility_provider--B--
+# https://login.theccdocs.com/custom/webhook.php?first_name=--A--first_name--B--&last_name=--A--last_name--B--&email=--A--email--B--&phone=--A--phone_number--B--&address=--A--address1--B--&city=--A--city--B--&state=--A--state--B--&postal_code=--A--postal_code--B--&call_notes=--A--call_notes--B--&dispo=--A--dispo--B--&agent=--A--fullname--B--&recording_url=RECORDINGS/MP3/--A--recording_filename--B---all.mp3&list_id=--A--list_id--B--&lead_id=--A--lead_id--B--&list_name=--A--list_name--B--&campaign=--A--campaign--B--&shade=--A--shade--B--&roof_age=--A--roof_age--B--&willing_remove_tree=--A--willing_remove_tree--B--&home_owned=--A--home_owned--B--&electric_provider=--A--electric_provider--B--&appt_type=--A--appt_type--B--&appointment_date=--A--appointment_date--B--&appointment_time=--A--appointment_time--B--&utility_provider=--A--utility_provider--B--
 
 
 /*
@@ -173,7 +173,7 @@ $parsedFields['dispo'] = $leadDispositionValues[$parsedFields['dispo']];
 	'postal_code' => $postalCode,
 	'comments' => $comments,
 	'call_notes' => $callNotes,
-	'recording_url' => $recordingUrl,
+	'recording_url' => $recordingPath,
 	'agent' => $agent,
 	'campaign' => $campaign,
 	'roof_age' => $roofAge,
@@ -192,7 +192,9 @@ $parsedFields['dispo'] = $leadDispositionValues[$parsedFields['dispo']];
 	'hs_id' => $huspotId
 ] = $parsedFields;
 
-$appt_notes = ' Agent: ' . $agent . ' Call Notes: ' . $callNotes;
+$actual_recording_url = get_recording_url($recordingPath);
+
+$appt_notes = ' Agent: ' . $agent . ' Call Notes: ' . $callNotes . ' Recording URL: ' . $actual_recording_url;
 
 $jsonObject = json_encode([
 	"properties" => [
@@ -252,7 +254,6 @@ if ($disposition === $leadDispositionValues['APPTBK']) {
 
 	if (ENABLE_DEBUG) {
 		$dump = createlogger('response-dump.txt');
-		$dump(json_encode($newContact));
-		$dump($vici_response);
+		$dump(json_encode($newContact) . PHP_EOL . $vici_response);
 	}
 }
