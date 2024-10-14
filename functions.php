@@ -162,7 +162,7 @@ function roundToNearestHalfHour($time)
  */
 function vicidial_api($call_function = 'update_lead', $params = '')
 {
-    $url_build = DIALER_URL . '/vicidial/non_agent_api.php?' . 'source=VICIDIAL' . '&user=' . VICIDIAL_USER . '&pass=' . VICIDIAL_PASS . '&function=' . $call_function . '&' . $params;
+    $url_build = DIALER_URL . '/vicidial/non_agent_api.php?' . 'source=Webhook' . '&user=' . VICIDIAL_USER . '&pass=' . VICIDIAL_PASS . '&function=' . $call_function . '&' . $params;
 
     return exec_curl_VICI($url_build);
 }
@@ -289,7 +289,7 @@ function get_latest_recording_details($agent)
     $date_only = $localTime->format('Y-m-d');
 
     $params = [
-        'source' => 'VICIDIAL',
+        'source' => 'Webhook',
         'stage' => 'pipe',
         'agent_user' => $agent,
         'date' => $date_only
