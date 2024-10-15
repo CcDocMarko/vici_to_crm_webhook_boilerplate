@@ -192,7 +192,7 @@ $parsedFields['dispo'] = $leadDispositionValues[$parsedFields['dispo']];
 	'hs_id' => $huspotId
 ] = $parsedFields;
 
-$actual_recording_url = get_recording_url_domain($recordingPath) . $recordingPath;
+$actual_recording_url = get_recording_url_domain($recordingPath);
 
 $appt_notes = ' Agent: ' . $agent . ' Call Notes: ' . $callNotes . ' Recording URL: ' . $actual_recording_url;
 
