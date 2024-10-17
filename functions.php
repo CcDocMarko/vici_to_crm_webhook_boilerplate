@@ -14,18 +14,45 @@ function exec_curl($endpoint, $method, $headers, $fields = '')
 {
     $curl = curl_init();
 
-    curl_setopt_array($curl, array(
-        CURLOPT_URL => $endpoint,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => $method,
-        CURLOPT_POSTFIELDS => $fields,
-        CURLOPT_HTTPHEADER => $headers,
-    ));
+    try {
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $endpoint,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_POSTFIELDS => $fields,
+            CURLOPT_HTTPHEADER => $headers,
+        ));
+        $response = curl_exec($curl);
+    } catch (\Throwable $th) {
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($curl);
+        $curlErrorNo = curl_errno($curl);
 
-    $response = curl_exec($curl);
+        if ($curlError) {
+            return [
+                'success' => false,
+                'error' => $curlError,
+                'error_no' => $curlErrorNo,
+            ];
+        }
+
+        if ($httpCode >= 400) {
+            return [
+                'success' => false,
+                'error' => 'HTTP Error: ' . $httpCode,
+                'response' => $response,
+            ];
+        }
+
+        return [
+            'success' => false,
+            'error' => "Error: " . $th->getMessage(),
+        ];
+    }
 
     curl_close($curl);
+
     return json_decode($response, true);
 }
 
