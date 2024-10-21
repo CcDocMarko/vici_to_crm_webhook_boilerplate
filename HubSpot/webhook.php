@@ -78,7 +78,6 @@ if ($parsedFields['appointment_time']) {
 	$parsedFields['appointment_time'] = roundToNearestHalfHour($parsedFields['appointment_time']);
 }
 
-
 # Map roof age
 $roofAgeValues = [
 	0 => "Less than 10 years old",
@@ -127,39 +126,30 @@ $parsedFields['utility_provider'] = $parsedFields['utility_provider'] ?  $utilit
 #Map disposition
 
 $leadDispositionValues = [
-	0  => "IN_PROGRESS",
 	"APPTBK"  => "Appointment Set",
-	2  => "Design",
-	3  => "Demo Completed",
-	4  => "SOLD JOB",
-	5  => "\"Not Interested\"",
-	6  => "Follow Up Set",
-	7  => "ATTEMPTED_TO_CONTACT",
-	8  => "Rep No Show",
-	9  => "Bad Contact Info",
-	10 => "Credit Fail",
-	11 => "UNQUALIFIED",
-	12 => "DQ - Closed Circut",
-	13 => "DQ - Tree Shading",
-	14 => "DQ - Roof Type",
-	15 => "DQ - Solar/Roof Follow Up",
-	16 => "DQ - Low Usage",
-	17 => "DQ - Outside of Service area",
-	18 => "DQ - Bad Utility",
-	19 => "Commercial",
-	20 => "Internal Contact",
-	21 => "Appointment Canceled",
-	22 => "Request Cancelled",
-	23 => "Sent to Nedz",
-	24 => "Insurance Save",
-	25 => "Roof Insurance Appointment",
-	26 => "Tenative Set",
+	"DQClos" => "DQ - Closed Circut",
+	"DQTree" => "DQ - Tree Shading",
+	"DQRoof" => "DQ - Roof Type",
+	"DQSolR" => "DQ - Solar/Roof Follow Up",
+	"DQLow" => "DQ - Low Usage",
+	"DQOoS" => "DQ - Outside of Service area",
+	"DQUtil" => "DQ - Bad Utility",
 	"DNC" => "DO NOT CALL!!",
-	28 => "Did Not Make Request",
-	29 => "Already Sold"
+	"DNReq" => "Did Not Make Request",
+	"DNQ" => "UNQUALIFIED"
 ];
 
+if (!isset($leadDispositionValues[$parsedFields['dispo']])) {
+	if (ENABLE_DEBUG) {
+		$error_dump = createlogger('error-dump.txt');
+		$error_dump("Dispo not found: " . $parsedFields['dispo'] . ", for phone" . $parsedFields['phone']) . PHP_EOL;
+	}
+	exit();
+}
+
 $parsedFields['dispo'] = $leadDispositionValues[$parsedFields['dispo']];
+
+$parsedFields['email'] = isset($parsedFields['email']) ? $parsedFields['email'] : 'phonenumber@call.com';
 
 # Unpacking, edit required values, remove unrequired
 [
@@ -196,32 +186,36 @@ $actual_recording_url = get_recording_url_domain($recordingPath);
 
 $appt_notes = ' Agent: ' . $agent . ' Call Notes: ' . $callNotes . ' Recording URL: ' . $actual_recording_url;
 
-$jsonObject = json_encode([
-	"properties" => [
-		"firstname" => $firstName,
-		"lastname" => $lastName,
-		"email" => $email,
-		"phone" => $phone,
-		"address" => $address,
-		"city" => $city,
-		"state" => $state,
-		"zip_code" => $postalCode,
-		"roof_age_new" => $roofAge,
-		"shade" => $shade,
-		"willing_to_remove_trees_" => $willingRemoveTree,
-		"how_long_have_you_owned_the_home_" => $homeOwned,
-		"who_is_your_electric_provider" => $electricProvider,
-		"appt_type" => $apptType,
-		"appointment_date" => $appointmentDate,
-		"new_appointment_time" => $appointmentTime,
-		"utility_provider_cloned_" => $utilityProvider,
-		"customer_type" => "Solar/Roof",
-		"hs_language" => "en",
-		"hs_lead_status" => $disposition,
-		"additional_appointment_details" => $appt_notes,
-	]
-], JSON_PRETTY_PRINT);
+$fields = [
+	"firstname" => $firstName,
+	"lastname" => $lastName,
+	"email" => $email,
+	"phone" => $phone,
+	"address" => $address,
+	"city" => $city,
+	"state" => $state,
+	"zip_code" => $postalCode,
+	"roof_age_new" => $roofAge,
+	"shade" => $shade,
+	"willing_to_remove_trees_" => $willingRemoveTree,
+	"how_long_have_you_owned_the_home_" => $homeOwned,
+	"who_is_your_electric_provider" => $electricProvider,
+	"appt_type" => $apptType,
+	"appointment_date" => $appointmentDate,
+	"new_appointment_time" => $appointmentTime,
+	"utility_provider_cloned_" => $utilityProvider,
+	"hs_lead_status" => $disposition,
+	"additional_appointment_details" => $appt_notes,
+];
 
+$properties = array_filter($fields, function ($value) {
+	return $value !== null && $value !== false && $value !== '';
+});
+
+$properties["customer_type"] = "Solar/Roof";
+$properties["hs_language"] = "en";
+
+$jsonObject = json_encode(["properties" => $properties], JSON_PRETTY_PRINT);
 
 if (ENABLE_DEBUG) {
 	$dump = createlogger('payload-dump.txt');
@@ -231,29 +225,37 @@ if (ENABLE_DEBUG) {
 # Setting Authorization
 $headers  = array('Authorization: Bearer ' . API_KEY, 'Content-Type: application/json');
 
-/*CREATE LEAD*/
+# UPDATE AGED LEADS
 
-if ($disposition === $leadDispositionValues['APPTBK']) {
+$endpoint = isset($parsedFields["hs_id"])  ? BASE_URL . "objects/contacts/" . $parsedFields["hs_id"] : BASE_URL . "objects/contacts/" . $parsedFields["email"] . "?idProperty=email";
+$aged_lead = exec_curl($endpoint, 'PATCH', $headers, $jsonObject);
+$hs_id = null;
+$response = $aged_lead;
 
+if ($response["message"] == "resource not found" && $disposition == "Appointment Set") {
+	# CREATE LEAD
 	$endpoint = BASE_URL . "objects/contacts";
 	$newContact = exec_curl($endpoint, 'POST', $headers, $jsonObject);
+	$hs_id = $newContact["id"];
+	$response = $newContact;
+} else {
+	$hs_id = $response["id"];
+}
 
-	$vici_response = 'Unable to update CRM id in vicidial';
+$vici_response = 'Unable to update CRM id in vicidial';
 
-	if ($newContact["id"]) {
-		$params = [
-			'custom_fields' => 'Y',
-			'hs_id' => $newContact["id"],
-			'lead_id' => $leadId,
-			'search_method' => 'LEAD_ID'
-		];
+if ($hs_id) {
+	$params = [
+		'custom_fields' => 'Y',
+		'hs_id' => $hs_id,
+		'lead_id' => $leadId,
+		'search_method' => 'LEAD_ID'
+	];
 
-		$vici_response = update_lead(http_build_query($params));
-	}
+	$vici_response = update_lead(http_build_query($params));
+}
 
-
-	if (ENABLE_DEBUG) {
-		$dump = createlogger('response-dump.txt');
-		$dump(json_encode($newContact) . PHP_EOL . $vici_response);
-	}
+if (ENABLE_DEBUG) {
+	$dump = createlogger('response-dump.txt');
+	$dump(json_encode($response) . PHP_EOL . $vici_response);
 }

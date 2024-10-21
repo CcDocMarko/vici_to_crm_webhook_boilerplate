@@ -51,6 +51,7 @@ function updateProspectID($lead_id, $prospect_id, $phone)
 		$logger = createLogger($file_name);
 		$logger("Update response for Lead ID: $lead_id, Prospect ID: $prospect_id, Phone: $phone - " . json_encode($response) . PHP_EOL);
 	}
+	
 	return $response;
 }
 
@@ -378,7 +379,7 @@ if ($result_customer["Records"]) {
 
 	$infoPayload = urlencode(json_encode($prospectInfo));
 
-	$updated_customer = updateCustomerData($infoPayload);
+	updateCustomerData($infoPayload);
 }
 
 /**
