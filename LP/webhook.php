@@ -51,7 +51,7 @@ function updateProspectID($lead_id, $prospect_id, $phone)
 		$logger = createLogger($file_name);
 		$logger("Update response for Lead ID: $lead_id, Prospect ID: $prospect_id, Phone: $phone - " . json_encode($response) . PHP_EOL);
 	}
-	
+
 	return $response;
 }
 
@@ -297,9 +297,8 @@ if (!$prospect_id) {
 
 			$endpoint_create_customer = BASE_URL . 'api/Leads/LeadAdd';
 
-			$payloadDate = new DateTime($apptDate);
-			$payloadTime = new DateTime($apptTime);
-			$formattedPayloadTime = $payloadTime->format('h:i');
+			$formattedDate = $dateTime->format('Ymd');
+			$formattedTime = $dateTime->format('Hi');
 
 			$payload = http_build_query([
 				'firstname' => $first_name,
@@ -312,8 +311,8 @@ if (!$prospect_id) {
 				'productID' => $product_type,
 				'email' => $email,
 				'notes' => $additional_notes,
-				'apptdate' => $payloadDate,
-				'appttime' => $formattedPayloadTime,
+				'apptdate' => $formattedDate,
+				'appttime' => $formattedTime,
 				'source' => 'Call Center',
 				'srs_id' => 1595,
 			]);
@@ -387,29 +386,3 @@ if ($result_customer["Records"]) {
  */
 
 $prospect_response = addNoteForProspect($prospect_id, $full_note, $phone, $auth);
-
-/**
- * WEB SCRAPPER
- */
-
-$formattedDate = $dateTime->format('Ymd');
-
-$formattedTime = $dateTime->format('Hi');
-
-$scrapper_url = "http://148.72.132.231:8000/leadsapiupdate/?phone=$phone&prospect_id=$prospect_id&despo=" . urlencode($mapped_dispo) . "&notes=" . urlencode($additional_notes) . "&call=" . urlencode($call_status) . "&app_date=" . $formattedDate . "&app_time=" . $formattedTime;
-
-$headers = [
-	'User-Agent: MyPHPscript/1.0 (https://americanremodeling.ccdocs.com/)',
-	'Accept: application/json',
-	'Cache-Control: no-cache',
-];
-
-$scrapper_response = exec_curl($scrapper_url, 'GET', $headers);
-
-if (ENABLE_DEBUG) {
-	$file_name = "log_scrapper_response.txt";
-	$logger = createLogger($file_name);
-	$logger(json_encode($scrapper_response));
-}
-
-exit();
