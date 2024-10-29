@@ -95,7 +95,7 @@ $payload =  '{
 		"city": "' . addslashes($city) . '",
 		"state": "' . addslashes($state) . '",
 		"zip": "' . addslashes($postalCode) . '",
-		"notes": "' . addslashes($notes) . '",
+		"notes": "' . addslashes($appt_notes) . '",
 		"salesPerson": "' . $SALESPERSON . '"';
 
 if (!empty($workType)) {
@@ -124,7 +124,7 @@ if (!empty($jobCategory)) {
 
 $payload .= '}';
 
-$response = exec_curl($ENDPOINT, 'POST', $headers, $payload);
+$response = exec_curl(BASE_URL, 'POST', $headers, $payload);
 
 $webhookLogEntry = null;
 
