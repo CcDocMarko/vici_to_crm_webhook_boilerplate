@@ -149,7 +149,7 @@ if (!isset($leadDispositionValues[$parsedFields['dispo']])) {
 
 $parsedFields['dispo'] = $leadDispositionValues[$parsedFields['dispo']];
 
-$parsedFields['email'] = isset($parsedFields['email']) ? $parsedFields['email'] : 'phonenumber@call.com';
+$parsedFields['email'] = isset($parsedFields['email']) ? $parsedFields['email'] : $parsedFields['phone'] . '@call.com';
 
 # Unpacking, edit required values, remove unrequired
 [
