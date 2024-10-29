@@ -5,7 +5,15 @@ require_once 'functions.php';
 # fetch request
 $result = $_REQUEST;
 $CRM_URL = 'https://th97a.leadperfection.com/djson.aspx';
-$CRM_COOKIES = '.AspNet.ApplicationCookie=65yT9DKnQCwHkxb_o1XMYuRzR8j3NNDActLUx5JKgpps1NUIoRJRdDD584sAfxMHYnmJqbBIZinX88l1iTDZ--_4-UQFbc_T4IisEZRnH2qyCE4Qac3Xy9DzBT-qScs-JyviWwqCNx3uUpMweV-sGDAAd-j_sBLk6O49W7wAVG-nch61tfY4ySyeSid6nfFSLxcxGmmbz0JY3gpLL-fRJQOmRiacDgMMbiOQcvetRa8CJqiCmyOyhBF0LbvJk63i6-KN_cKYvtpwb3j-CSj8XZnrcQbz3rkrCCP1MClsIfi9BpZvce2jJNwwKLFAP7yDlj6XEgS0KBkrEEOqiqpRZ90jE6NNNqJl4yKAy_jsfFN5jqhYtSpwutXe7rSGcSOJ';
+
+$cookie_get = exec_curl('http://148.72.132.231/custom/get-cookies.php', 'GET', []);
+
+if (!isset($cookie_get['cookie'])) {
+	echo 'No cookie obtained.';
+	exit();
+}
+
+$CRM_COOKIE = $cookie_get['cookie'];
 # Today's timestamp
 $req_date = date('Y-m-d H:i:s');
 
@@ -41,7 +49,9 @@ function updateProspectID($lead_id, $prospect_id, $phone)
 {
 	$update_params = http_build_query([
 		'lead_id' => $lead_id,
-		'prospect_id' => $prospect_id
+		'prospect_id' => $prospect_id,
+		'search_method' => 'LEAD_ID',
+		'custom_fields' => 'Y'
 	]);
 
 	$response = update_lead($update_params);
@@ -49,7 +59,7 @@ function updateProspectID($lead_id, $prospect_id, $phone)
 	if (ENABLE_DEBUG) {
 		$file_name = "update_prospect_id_log.txt";
 		$logger = createLogger($file_name);
-		$logger("Update response for Lead ID: $lead_id, Prospect ID: $prospect_id, Phone: $phone - " . json_encode($response) . PHP_EOL);
+		$logger("Update response for Lead ID: $lead_id, Prospect ID: $prospect_id, Phone: $phone - " . $response . PHP_EOL);
 	}
 
 	return $response;
@@ -57,12 +67,12 @@ function updateProspectID($lead_id, $prospect_id, $phone)
 
 function fetchCustomerData($custId)
 {
-	global $CRM_URL, $CRM_COOKIES;
+	global $CRM_URL, $CRM_COOKIE;
 
 	$url = $CRM_URL . '?[{"ajax":"GetCustomer","options":"0","term":"get","format":"jsondata","data":[{"custid":"' . $custId . '"}]}]:';
 
 	$headers = [
-		"Cookie: " . $CRM_COOKIES
+		"Cookie: " . $CRM_COOKIE
 	];
 
 	$response = exec_curl($url, 'GET', $headers);
@@ -70,14 +80,14 @@ function fetchCustomerData($custId)
 	return $response;
 }
 
-function updateCustomerData($payload)
+function updateCustomerData($payload, $action)
 {
-	global $CRM_URL, $CRM_COOKIES;
+	global $CRM_URL, $CRM_COOKIE;
 
-	$url = $CRM_URL . '?[{"ajax":"SaveProspectInfo","options":"0","term":"get","format":"jsondata","data":[' . $payload . ']}]:';
+	$url = $CRM_URL . '?[{"ajax":"' . $action . '","options":"0","term":"get","format":"jsondata","data":[' . $payload . ']}]:';
 
 	$headers = [
-		"Cookie: " . $CRM_COOKIES
+		"Cookie: " . $CRM_COOKIE
 	];
 
 	$response = exec_curl($url, 'GET', $headers);
@@ -138,7 +148,10 @@ $request_body_keys = [
 	'app_date',
 	'app_time',
 	'product_type',
-	'prospect_id'
+	'prospect_id',
+	'ils_id',
+	'lds_id',
+	'mkt_id'
 ];
 
 $parsed_fields = processFields($result, $request_body_keys);
@@ -173,12 +186,15 @@ if ($parsed_fields['dispo'] == 'Set') {
 	'app_date' => $app_date,
 	'app_time' => $app_time,
 	'product_type' => $product_type,
-	'prospect_id' => $prospect_id
+	'prospect_id' => $prospect_id,
+	'ils_id' => $issued_lead_id,
+	'lds_id' => $lp_lead_id,
+	'mkt_id' => $market_id
 ] = $parsed_fields;
 
 
 /***********
-	TOKEN
+	TOKEN & COOKIE
  ************/
 
 $endpoint_get_token = BASE_URL . 'token';
@@ -214,7 +230,7 @@ if ($mapped_dispo === "A" || $mapped_dispo === "HANGUP") {
 	$mapped_dispo = "data";
 }
 
-$dateTime = new DateTime($app_date . ' ' . $app_time);
+$dateTime = new DateTime($app_date . ' ' . roundToNearestHalfHour($app_time));
 
 if ($dateTime < new DateTime()) {
 	$dateTime = new DateTime();
@@ -297,8 +313,8 @@ if (!$prospect_id) {
 
 			$endpoint_create_customer = BASE_URL . 'api/Leads/LeadAdd';
 
-			$formattedDate = $dateTime->format('Ymd');
-			$formattedTime = $dateTime->format('Hi');
+			$formattedDate = $dateTime->format('m/d/Y');
+			$formattedTime = $dateTime->format('h:iA');
 
 			$payload = http_build_query([
 				'firstname' => $first_name,
@@ -378,7 +394,24 @@ if ($result_customer["Records"]) {
 
 	$infoPayload = urlencode(json_encode($prospectInfo));
 
-	updateCustomerData($infoPayload);
+	$saved_prospect_info = updateCustomerData($infoPayload, 'SaveProspectInfo');
+
+	# Update a prospect lead's disposition
+	$lead_records = $result_customer["Records9"];
+
+	if (!$lp_lead_id) {
+		$lp_lead_id = $lead_records[0]["leadnumber"];
+	}
+
+	$leadPayload = urlencode(json_encode([
+		"custid" => $prospect_id,
+		"lds_id" => $lp_lead_id,
+		"dsp_id" => $mapped_dispo,
+		"notes" => $additional_notes,
+		"custrev" => $rev,
+		'productid' => $product_type,
+		#'pro_id' => "539"
+	]));
 }
 
 /**
@@ -386,3 +419,7 @@ if ($result_customer["Records"]) {
  */
 
 $prospect_response = addNoteForProspect($prospect_id, $full_note, $phone, $auth);
+
+
+# Callback updates from API side
+# Add call record in the call tab
