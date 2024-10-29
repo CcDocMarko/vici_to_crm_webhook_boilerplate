@@ -95,6 +95,27 @@ function updateCustomerData($payload, $action)
 	return $response;
 }
 
+/*
+Employee Mapping:
+473  - Samantha Ellwood
+461  - Cristina Gallardo
+333  - Amber Garrett
+361  - Desiree Gephardt
+520  - Kaylee Kelly
+513  - Tracey Urquiza
+408  - Darian Wise
+*/
+
+$employeeMapping = [
+	850004 => 473,
+	850005 => 461,
+	// No direct match found for "Amber Garrett"
+	850002 => 361,
+	850009 => 520,
+	850007 => 513,
+	850003 => 408
+];
+
 $map_disposition = [
 	'3rdPAR' => '3rd Party',
 	'BADCRD' => 'Bad Credit',
@@ -151,7 +172,8 @@ $request_body_keys = [
 	'prospect_id',
 	'ils_id',
 	'lds_id',
-	'mkt_id'
+	'mkt_id',
+	'setter'
 ];
 
 $parsed_fields = processFields($result, $request_body_keys);
