@@ -66,16 +66,12 @@ if (strlen($content) > 2000) {
 
 $fields = ['username' => '🤑🔥🤑 New Appointment 🤑🔥🤑', 'content' => $content];
 
-foreach ($fields as $key => $value) {
-	echo '<div>' . $value . '</div>';
-}
-
-$func_response = exec_curl($url, 'POST', $headers, $fields);
+$func_response = exec_curl($url, 'POST', $headers, json_encode($fields));
 
 $logFile = null;
 
 if (ENABLE_DEBUG) {
-	$logFile = createLogger('response_log.txt');
+	$logFile = createLogger('discord_response_log.txt');
 }
 
 if (empty($func_response)) {
