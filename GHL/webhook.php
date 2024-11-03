@@ -41,67 +41,18 @@ $requestBodyKeys = array(
 	'agent',
 	'campaign',
 	'contact_id',
-	'credit_score',
-	'roof_age',
-	'roof_type',
-	'avg_electric_bill',
-	'shading',
 	'lead_id',
 	'list_id',
 	'list_name',
-	'willing_remove_tree'
 );
 
 $parsedFields = processFields($result, $requestBodyKeys);
-
-# Serialize credit score for GHL
-if (array_key_exists('credit_score', $parsedFields)) {
-	$score = $parsedFields['credit_score'];
-	$score_exists = array_key_exists($score, $creditScoreValues);
-	$parsedFields['credit_score'] = $score_exists ? $creditScoreValues[$score] : 'No Score';
-}
-
-# Serialize roof shade for GHL
-if (array_key_exists('shading', $parsedFields)) {
-	$shade = $parsedFields['shading'];
-	$shade_exists = array_key_exists($shade, $roofShadeValues);
-	$parsedFields['shading'] = $shade_exists ? $roofShadeValues[$shade] : 'Uncertain';
-}
-
-# Serialize average electric bill for GHL
-if (array_key_exists('avg_electric_bill', $parsedFields)) {
-	$bill = preg_replace('/[^0-9]/', '', $parsedFields['avg_electric_bill']);
-	$bill = (int)$bill;
-
-	switch (true) {
-		case ($bill <= 100):
-			$parsedFields['avg_electric_bill'] = '$0 - $100';
-			break;
-		case ($bill <= 150):
-			$parsedFields['avg_electric_bill'] = '$101 - $150';
-			break;
-		case ($bill <= 200):
-			$parsedFields['avg_electric_bill'] = '$151 - $200';
-			break;
-		case ($bill <= 300):
-			$parsedFields['avg_electric_bill'] = '$201 - $300';
-			break;
-		case ($bill <= 400):
-			$parsedFields['avg_electric_bill'] = '$301 - $400';
-			break;
-		case ($bill <= 500):
-			$parsedFields['avg_electric_bill'] = '$401 - $500';
-			break;
-		case ($bill > 500):
-			$parsedFields['avg_electric_bill'] = '$500+';
-			break;
-	}
-}
 
 # verifying email
 if ((empty($email)) || (strpos($email, '@') === false)) {
 	$email = "dummy" . "@dummymail.com";
 }
+
 /*
 * Specific fields that require treatment outside of processFields()
 */
@@ -126,185 +77,91 @@ if ($parsedFields['dispo'] == 'APPTBK') {
 	'postal_code' => $postalCode,
 	'comments' => $comments,
 	'call_notes' => $callNotes,
-	'recording_url' => $recordingUrl,
+	'recording_url' => $recordingPath,
 	'agent' => $agent,
 	'campaign' => $campaign,
 	'contact_id' => $contactId,
-	'credit_score' => $creditScore,
-	'roof_age' => $roofAge,
-	'roof_type' => $roofType,
-	'avg_electric_bill' => $avgElectricBill,
-	'shading' => $shading,
 	'lead_id' => $leadId,
 	'list_id' => $listId,
 	'list_name' => $listName,
-	'willing_remove_tree' => $willingRemoveTree,
 ] = $parsedFields;
 
 # Authorization header
 $headers  = array('Authorization: Bearer ' . API_KEY, 'Content-Type: application/json');
 
-if ($campaign == 'NoShow') {
-	if (empty($contactId) || $contactId == '' || $contactId == '--A--ghl_contact_id--B--') {
-		/********************
-		 * updating contact *
-		 ********************/
-		$fields   = '{
-				"email": "' . $email . '",
-				"phone": "+1' . $phone . '",
-				"firstName": "' . $firstName . '",
-				"lastName": "' . $lastName . '",
-				"address1": "' . $address . '",
-				"city": "' . $city . '",
-				"state": "' . $state . '",
-				"postalCode": "' . $postalCode . '",
-				"source": "VICIdial",
-				"tags": [
-					"' . $tag . '"
-				],
-				"customField": {
-					"credit_score": "' . $creditScore . '",
-					"roof_shade": "' . $shading . '",
-					"what_is_your_average_monthly_electric_bill": "' . $avgElectricBill . '",
-					"will_cut_trees": "' . $willingRemoveTree . '",
-			    }
-			}';
-		$contactDetail = exec_curl(BASE_URL, 'POST', $headers, $fields);
+/********************
+ * creating contact *
+ ********************/
 
-		$webhookLogEntry = null;
+$data = [
+	"email" => $email,
+	"phone" => "+1" . $phone,
+	"firstName" => $firstName,
+	"lastName" => $lastName,
+	"address1" => $address,
+	"city" => $city,
+	"state" => $state,
+	"postalCode" => $postal_code,
+	"source" => "VICIdial",
+	"tags" => [$tag],
+	"customField" => [
+		"vicidial_lead_id" => $leadId,
+		"vicidial_list_id" => $listId,
+		"vicidial_list_name" => $listName
+	]
+];
 
-		if (ENABLE_DEBUG) {
-			$webhookLogEntry = createLogger('webhook_log.txt');
-		}
+// Encode the array into a JSON string
+$fields = json_encode($data, JSON_UNESCAPED_SLASHES);
 
-		if (empty($contactDetail['contact']['id'])) {
-			if ($webhookLogEntry) {
-				$text = "Contact not found. " . json_encode($contactDetail);
-				$webhookLogEntry($text);
-			}
-			exit();
-		}
+$contactDetail = exec_curl(BASE_URL . '/v1/contacts', 'POST', $headers, $fields);
+$webhookLogEntry = null;
 
-		$contactId = $contactDetail['contact']['id'];
-		if ($webhookLogEntry) {
-			$text = "Contact found. Contact Id: " . $contactId;
-			$webhookLogEntry($text);
-		}
-	} else {
-		/********************
-		 * updating contact *
-		 ********************/
-		$endpoint = BASE_URL . $contactId;
-		$fields   = '{
-				"email": "' . $email . '",
-				"phone": "+1' . $phone . '",
-				"firstName": "' . $firstName . '",
-				"lastName": "' . $lastName . '",
-				"address1": "' . $address . '",
-				"city": "' . $city . '",
-				"state": "' . $state . '",
-				"postalCode": "' . $postalCode . '",
-				"source": "VICIdial",
-				"tags": [
-					"' . $tag . '"
-				],
-				"customField": {
-					"credit_score": "' . $creditScore . '",
-					"roof_shade": "' . $shading . '",
-					"what_is_your_average_monthly_electric_bill": "' . $avgElectricBill . '",
-					"will_cut_trees": "' . $willingRemoveTree . '",
-			    }
-			}';
-		$contactDetail = exec_curl($endpoint, 'PUT', $headers, $fields);
+if (ENABLE_DEBUG) {
+	$webhookLogEntry = createLogger('webhook_log.txt');
+}
 
-		$webhookLogEntry = null;
-
-		if (ENABLE_DEBUG) {
-			$webhookLogEntry = createLogger('webhook_log.txt');
-		}
-
-		if (empty($contactDetail['contact']['id'])) {
-			// writing to file
-			$text = "Contact not found. " . json_encode($contactDetail);
-			if ($webhookLogEntry) {
-				$webhookLogEntry($text);
-			}
-			exit();
-		}
-
-		$contactId = $contactDetail['contact']['id'];
-		// writing to file
-		$text = "Contact found. Contact Id: " . $contactId;
-		if ($webhookLogEntry) {
-			$webhookLogEntry($text);
-		}
-		/********************
-		 * updating contact *
-		 ********************/
-	}
-} else {
-	/********************
-	 * creating contact *
-	 ********************/
-	// VICIdial custom fields
-	$fields   = '{
-			"email": "' . $email . '",
-			"phone": "+1' . $phone . '",
-			"firstName": "' . $firstName . '",
-			"lastName": "' . $lastName . '",
-			"address1": "' . $address . '",
-			"city": "' . $city . '",
-			"state": "' . $state . '",
-			"postalCode": "' . $postal_code . '",
-			"source": "VICIdial",
-			"tags": [
-				"' . $tag . '"
-			],
-			"customField": {
-				"credit_score": "' . $creditScore . '",
-				"roof_shade": "' . $shading . '",
-				"what_is_your_average_monthly_electric_bill": "' . $avgElectricBill . '",
-				"will_cut_trees": "' . $willingRemoveTree . '",
-		      "vicidial_lead_id": "' . $leadId . '",
-		      "vicidial_list_id": "' . $listId . '",
-		      "vicidial_list_name": "' . $listName . '"
-		    }
-		}';
-	$contactDetail = exec_curl(BASE_URL, 'POST', $headers, $fields);
-	$webhookLogEntry = null;
-
-	if (ENABLE_DEBUG) {
-		$webhookLogEntry = createLogger('webhook_log.txt');
-	}
-
-	if (empty($contactDetail['contact']['id'])) {
-		// writing to file
-		if ($webhookLogEntry) {
-			$text = "Couldn't create a new Contact. " . json_encode($contactDetail);
-			$webhookLogEntry($text);
-		}
-		exit();
-	}
-
-	$contactId = $contactDetail['contact']['id'];
+if (empty($contactDetail['contact']['id'])) {
 	// writing to file
 	if ($webhookLogEntry) {
-		$text = "Contact succesfully created. Contact Id: " . $contactId;
+		$text = "Couldn't create a new Contact. " . json_encode($contactDetail);
 		$webhookLogEntry($text);
 	}
-	/********************
-	 * creating contact *
-	 ********************/
+	exit();
 }
+
+$contactId = $contactDetail['contact']['id'];
+// writing to file
+if ($webhookLogEntry) {
+	$text = "Contact succesfully created. Contact Id: " . $contactId;
+	$webhookLogEntry($text);
+}
+/********************
+ * creating contact *
+ ********************/
+
 
 /****************
  * adding notes *
  ****************/
 // VICIdial notes to the contact record
-$endpoint = 'https://rest.gohighlevel.com/v1/contacts/' . $contactId  . '/notes/';
-$fields   = '{"body": "Disposition: ' . $disposition . ' \\n Agent: ' . $agent . ' \\n Call Notes: ' . str_replace("\n", "\\n", $callNotes) . ' \\n Recording URL: ' . $recordingUrl . '"}';
+$endpoint = BASE_URL . '/v1/contacts/' . $contactId  . '/notes/';
 
-$notesResponse = exec_curl($endpoint, 'POST', $headers, $fields);
+$actual_recording_url = get_recording_url_domain($recordingPath);
+
+$fields = [
+	"body" => sprintf(
+		"Disposition: %s \n Agent: %s \n Call Notes: %s \n Recording URL: %s",
+		$disposition,
+		$agent,
+		str_replace("\n", "\\n", $callNotes),
+		$actual_recording_url
+	)
+];
+
+$jsonFields = json_encode($fields, JSON_UNESCAPED_SLASHES);
+
+$notesResponse = exec_curl($endpoint, 'POST', $headers, $jsonFields);
 
 if (ENABLE_DEBUG) {
 	$logger = createLogger("log_notes_response.txt");

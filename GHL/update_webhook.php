@@ -29,9 +29,6 @@ $phone = preg_replace('/[^\,0-9]/', '', $phone);
 
 $TARGET_URL = BASE_URL . '/v1/contacts/' . $contact_id . '/notes/';
 
-if (isset($function) && $function == 'add_tags') {
-	$TARGET_URL = BASE_URL . '/v1/tags/';
-}
 
 $get_response = exec_curl($TARGET_URL, 'GET', array('Authorization: Bearer ' . API_KEY));
 
@@ -64,31 +61,6 @@ if (array_key_exists("notes", $get_response)) {
 	}
 
 	exit();
-}
-
-if (array_key_exists("tags", $get_response)) {
-	$tags = [];
-	foreach ($get_response['tags'] as $tag) {
-		array_push($tags, $tag['name']);
-	}
-	$str_tags = implode(',', $tags);
-	if ($lead_id == '') {
-		$params = 'search_method=PHONE_NUMBER&records=5&phone_number=' . $phone . '&custom_fields=Y&tags=' . $str_tags;
-	} else {
-		$params = 'search_method=LEAD_ID&lead_id=' . $lead_id . '&custom_fields=Y&tags=' . $str_tags;
-	}
-
-	$add_tags_response = update_lead($params);
-
-	$result = strpos($add_tags_response, 'SUCCESS');
-
-	if (is_numeric($result)) {
-		$text = "\n $req_date | Tags Added to the Contact. " . $add_tags_response;
-		$log_file($text);
-	} else {
-		$text = "\n $req_date | Error Adding Tags to the Contact. " . $add_tags_response;
-		$log_file($text);
-	}
 }
 
 $text = "\n $req_date | Error Fetching Data. " . json_encode($get_response);
