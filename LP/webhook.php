@@ -435,6 +435,8 @@ if ($result_customer["Records"]) {
 		#'pro_id' => "539"
 	]));
 
+	$lead_update = updateCustomerData($leadPayload, 'SaveLead');
+
 	# Update a prospect call log tab
 
 	$new_call_Record = [
