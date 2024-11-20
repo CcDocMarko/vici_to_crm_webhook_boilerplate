@@ -434,6 +434,18 @@ if ($result_customer["Records"]) {
 		'productid' => $product_type,
 		#'pro_id' => "539"
 	]));
+
+	# Update a prospect call log tab
+
+	$new_call_Record = [
+		"custid" => $prospect_id,
+		"calls_id" => 0,
+		"calls_phone" => $phone,
+		"calls_type" => "T",
+		"calls_result" => mapCallStatus($mapped_dispo, $map_call_status, 'NG'), 
+	];
+
+	$callPayload = urlencode(json_encode($new_call_Record));
 }
 
 /**
