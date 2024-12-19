@@ -64,14 +64,21 @@ function exec_curl($endpoint, $method, $headers, $fields = '')
  */
 function createLogger($file_name)
 {
-    // Append today's timestamp to the file upon initialization
+    // Ensure that the "logs" directory exists in the project root directory
+    $log_dir = __DIR__ . '/logs';
+    if (!is_dir($log_dir)) {
+        mkdir($log_dir, 0755, true);
+    }
+
+    $file_path = $log_dir . '/' . $file_name;
+
     $req_date = date('Y-m-d H:i:s');
-    file_put_contents($file_name, "\n*******************TIMESTAMP : $req_date *********************\n", FILE_APPEND);
+    file_put_contents($file_path, "\n*******************TIMESTAMP : $req_date *********************\n", FILE_APPEND);
 
     // Return the closure for logging
-    return function ($message) use ($file_name) {
+    return function ($message) use ($file_path) {
         // Log the message to the file
-        file_put_contents($file_name, $message, FILE_APPEND);
+        file_put_contents($file_path, $message, FILE_APPEND);
     };
 }
 
@@ -117,7 +124,8 @@ function exec_curl_VICI($url)
 function processFields($result, $paramKeys)
 {
     if (ENABLE_DEBUG) {
-        $file_name = "log_url_params.txt";
+        $req_date = date('Y-m-d');
+        $file_name = "log_url_params_$req_date.txt";
         $logger = createLogger($file_name);
     }
 
@@ -234,7 +242,8 @@ function get_recording_url_domain($recordingPath)
     $recordingLogEntry = null;
 
     if (ENABLE_DEBUG) {
-        $recordingLogEntry = createLogger('recording_urls_logs.txt');
+        $req_date = date('Y-m-d');
+        $recordingLogEntry = createLogger("recording_urls_logs_$req_date.txt");
     }
 
     $attempts = 0;
@@ -330,7 +339,7 @@ function get_latest_recording_details($agent)
     $lastRecord = end($lines);
     $record = explode('|', $lastRecord);
     if (ENABLE_DEBUG) {
-        $recordingLogEntry = createLogger('recording_log.txt');
+        $recordingLogEntry = createLogger("recording_log_$date_only.txt");
         $recordingLogEntry('Last record: ' . $lastRecord . PHP_EOL);
     }
     return $record;
