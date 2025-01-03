@@ -27,8 +27,10 @@ $requestBodyKeys = array(
     'list_name',
 );
 
+$localTime = new DateTime();
+$date_only = $localTime->format('Y-m-d');
 
-$webhookLogEntry = createLogger('webhook_slack_log.txt');
+$webhookLogEntry = createLogger("webhook_slack_log_$date_only.txt");
 
 $parsedFields = processFields($result, $requestBodyKeys);
 

@@ -66,57 +66,46 @@ if ($parsedFields['dispo'] == 'APPTBK') {
 	'list_name' => $listName,
 ] = $parsedFields;
 
-# Authorization header
-$headers  = array('Authorization: Zoho-oauthtoken ' . API_KEY, 'Content-Type: application/json');
+/*********
+ * Zoho access token
+ */
+
+$jsonFilePath = '/var/www/html/custom/zoho/{json filename}.json';
+
+$jsonContents = file_get_contents($jsonFilePath);
+
+$data = json_decode($jsonContents, true);
+
+$access_token = $data['access_token'];
+
+$headers  = array('Authorization: Zoho-oauthtoken ' . $access_token, 'Content-Type: application/json');
 
 # Body Payload
 
-$data = [
-	"contact_name" => $firstName . ' ' . $lastName,
-	"billing_address" => [
-		"address" => $address,
-		"city" => $city,
-		"state" => $state,
-		"zip" => $postal_code,
-		"phone" => "+1" . $phone
-	],
-	"language_code" => "en",
-	"tags" => [
+$payload = [
+	"data" => [
 		[
-			"tag_id" => $tag
+			"Owner" => [
+				"id" => "", # USER ID
+			],
+			"Last_Name"       => $lastName,
+			"Email"           => $email,
+			"Description"     => $callNotes,
+			"Website"         => "crm.zoho.com",
+			"First_Name"      => $firstName,
+			"Lead_Status"     => "",
+			"Phone"           => $phone,
+			"Street"          => $address,
+			"Zip_Code"        => $postalCode,
+			"City"            => $city,
+			"State"           => $state,
+			"Lead_Source"     => "VICIdial",
+			"Country"         => "USA",
 		]
-	],
-	"custom_fields" => [
-		[
-			"index" => 1,
-			"value" => $leadId
-		],
-		[
-			"index" => 2,
-			"value" => $listId
-		],
-		[
-			"index" => 3,
-			"value" => $listName
-		]
-	],
-	"contact_persons" => [
-		"first_name" => $firstName,
-		"last_name" => $lastName,
-		"email" => $email,
-		"phone" => $phone,
-		"mobile" => $phone,
-		"is_primary_contact" => true,
-		"enable_portal" => true
-	],
-	"notes" => sprintf(
-		"Disposition: %s \n Agent: %s \n Call Notes: %s \n Recording URL: %s",
-		$disposition,
-		$agent,
-		str_replace("\n", "\\n", $callNotes),
-		$actual_recording_url
-	)
+	]
 ];
+
+$payload = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
 $webhookLogEntry = null;
 
@@ -124,15 +113,13 @@ $webhookLogEntry = null;
  * Updating contact 
  */
 
-$params = urlencode("phone=" . $phone . "&email=" . $email);
+$contact_exists = exec_curl(BASE_URL . '/Leads/search?phone=' . $phone, 'GET', $headers);
 
-$contact_exists = exec_curl(BASE_URL . '/contacts?' . $params, 'GET', $headers);
+if (!empty($contact_exists['data'])) {
 
-if (!empty($contact_exists['contacts'])) {
+	$contact_id = $contact_exists['data'][0]['id'];
 
-	$contact_id = $contact_exists['contacts'][0]['contact_id'];
-
-	$contactDetail = exec_curl(BASE_URL . '/contacts/' . $contact_id, 'PUT', $headers, json_encode($data, JSON_UNESCAPED_SLASHES));
+	$contactDetail = exec_curl(BASE_URL . '/Leads/' . $contact_id, 'PUT', $headers, $payload);
 
 	if ($contactDetail['message'] == "Contact has been updated successfully") {
 		if ($webhookLogEntry) {
@@ -147,32 +134,18 @@ if (!empty($contact_exists['contacts'])) {
  * Updated contact 
  */
 
-
 /********************
- * creating contact *
+ * 
+ * Creating contact *
  ********************/
 
-$fields = json_encode($data, JSON_UNESCAPED_SLASHES);
-
-$contactDetail = exec_curl(BASE_URL . '/contacts', 'POST', $headers, $fields);
+$contactDetail = exec_curl(BASE_URL . '/Leads', 'POST', $headers, $payload);
 
 if (ENABLE_DEBUG) {
-	$webhookLogEntry = createLogger('webhook_log.txt');
+	$webhookLogEntry = createLogger('lead_create_log_' . TIMESTAMP . '.txt');
+	$webhookLogEntry(json_encode($contactDetail));
 }
 
-if (empty($contactDetail['contact']['id'])) {
-	if ($webhookLogEntry) {
-		$text = "Couldn't create a new Contact. " . json_encode($contactDetail);
-		$webhookLogEntry($text);
-	}
-	exit();
-}
-
-$contactId = $contactDetail['contact']['id'];
-if ($webhookLogEntry) {
-	$text = "Contact succesfully created. Contact Id: " . $contactId;
-	$webhookLogEntry($text);
-}
 /********************
- * creating contact *
+ * Created contact *
  ********************/

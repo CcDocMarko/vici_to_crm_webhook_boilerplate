@@ -13,3 +13,7 @@ define('VICIDIAL_DOMAINS', [
 	'https://dialer2.theccdocs.com/',
 	'https://login.theccdocs.com/'
 ]); 
+# Timestamp for additional loggers
+$localTime = new DateTime();
+$date_only = $localTime->format('Y-m-d');
+define('TIMESTAMP', $date_only);
